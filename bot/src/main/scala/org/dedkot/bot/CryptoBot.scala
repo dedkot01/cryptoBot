@@ -10,6 +10,7 @@ import com.bot4s.telegram.api.declarative.{Callbacks, Commands}
 import com.bot4s.telegram.future.Polling
 import com.bot4s.telegram.methods.{EditMessageReplyMarkup, EditMessageText}
 import com.bot4s.telegram.models.{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup}
+import org.dedkot.generator.models.CandleRepository
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -21,9 +22,9 @@ class CryptoBot(token: String) extends ExampleBot(token)
 
   val cryptoKeyboard = ReplyKeyboardMarkup(
     keyboard = Seq(
-      Seq(KeyboardButton("ADA"), KeyboardButton("BNB")),
-      Seq(KeyboardButton("BTC"), KeyboardButton("DOGE")),
-      Seq(KeyboardButton("DOT"), KeyboardButton("ETH")),
+      Seq(KeyboardButton("/ADA"), KeyboardButton("/BNB")),
+      Seq(KeyboardButton("/BTC"), KeyboardButton("/DOGE")),
+      Seq(KeyboardButton("/DOT"), KeyboardButton("/ETH")),
     ),
     resizeKeyboard = Option(true)
   )
@@ -36,8 +37,19 @@ class CryptoBot(token: String) extends ExampleBot(token)
     reply("Выберите криптовалюту", replyMarkup = Option(cryptoKeyboard)).void
   }
 
-  onCommand("/inline") { implicit msg =>
-    reply("Держи инлайн кнопку", replyMarkup = Option(stopBtn)).void
+  onCommand("/ADA" | "/BNB" | "/BTC" | "/DOGE" | "/DOT" | "/ETH") { implicit msg =>
+    val candle = CandleRepository.selectCandle(msg.text.get.split("/")(1))
+    val answer =
+      s"""
+        |${candle.figi.value}:
+        |* Интервал: ${candle.interval}
+        |* Нижняя граница: ${candle.details.low}
+        |* Верхняя граница: ${candle.details.high}
+        |* Открытие: ${candle.details.open}
+        |* Закрытие: ${candle.details.close}
+        |* Время: ${candle.details.openTime}
+        |""".stripMargin
+    reply(answer, replyMarkup = Option(stopBtn)).void
   }
 
   onCallbackQuery { implicit cbq =>

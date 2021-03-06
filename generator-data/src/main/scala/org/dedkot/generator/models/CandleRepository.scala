@@ -4,7 +4,11 @@ import doobie._
 import doobie.implicits._
 import cats.effect._
 
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
+import scala.util.Random
 
 object CandleRepository {
 
@@ -32,20 +36,46 @@ object CandleRepository {
         );
       """.update.run.transact(xa).unsafeRunSync
 
+  def selectCandle(figi: String): Candle = {
+    val result = sql"""
+         SELECT interval, figi, low, high, open, close, "openTime" FROM candle WHERE figi = $figi;
+       """
+      .query[(String, String, Double, Double, Double, Double, Long)]
+      .stream
+      .head
+      .compile.last
+      .transact(xa)
+      .unsafeRunSync
+      .get
+
+    Candle(
+      FiniteDuration(result._1.split(" ")(0).toInt, TimeUnit.MILLISECONDS),
+      result._2 match {
+        case "ADA" => Figis.ADA
+        case "BNB" => Figis.BNB
+        case "BTC" => Figis.BTC
+        case "DOGE" => Figis.DOGE
+        case "DOT" => Figis.DOT
+        case "ETH" => Figis.ETH
+      },
+      CandleDetails(result._3, result._4, result._5, result._6, Instant.ofEpochSecond(result._7))
+    )
+  }
+
   def upsertCandle(candle: Candle): Int =
     sql"""
         INSERT INTO candle (figi, interval, low, high, open, close, "openTime")
         VALUES (${candle.figi.value}, ${candle.interval.toString},
           ${candle.details.low}, ${candle.details.high},
           ${candle.details.open}, ${candle.details.close},
-          ${candle.details.openTime.getEpochSecond * 1000})
+          ${candle.details.openTime.getEpochSecond})
         ON CONFLICT (figi)
         DO UPDATE SET interval = ${candle.interval.toString},
           low = ${candle.details.low},
           high = ${candle.details.high},
           open = ${candle.details.open},
           close = ${candle.details.close},
-          "openTime" = ${candle.details.openTime.getEpochSecond * 1000};
+          "openTime" = ${candle.details.openTime.getEpochSecond};
       """.update.run.transact(xa).unsafeRunSync
 
 }

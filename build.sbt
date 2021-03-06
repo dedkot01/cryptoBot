@@ -8,6 +8,7 @@ lazy val bot = (project in file("bot"))
     assemblyJarName in assembly := "cryptoBot.jar",
     libraryDependencies ++= Dependencies.tgBot
       ++ Dependencies.akka
+      ++ Dependencies.doobie
   )
 
 lazy val generator = (project in file("generator-data"))
