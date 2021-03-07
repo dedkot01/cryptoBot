@@ -11,12 +11,12 @@ case class CandleDetails(low: BigDecimal, high: BigDecimal, open: BigDecimal, cl
 
 object Figis {
 
-  val BTC = Figi("BTC")
-  val ETH = Figi("ETH")
-  val BNB = Figi("BNB")
-  val DOGE = Figi("DOGE")
-  val DOT = Figi("DOT")
-  val ADA = Figi("ADA")
+  val BTC: Figi = Figi("BTC")
+  val ETH: Figi = Figi("ETH")
+  val BNB: Figi = Figi("BNB")
+  val DOGE: Figi = Figi("DOGE")
+  val DOT: Figi = Figi("DOT")
+  val ADA: Figi = Figi("ADA")
 
 }
 

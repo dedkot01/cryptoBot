@@ -8,7 +8,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 
 object Main extends App {
-  while(true) {
+  while (true) {
     val candle = Candle(
       FiniteDuration(5000, TimeUnit.MILLISECONDS),
       Random.nextInt(6) match {

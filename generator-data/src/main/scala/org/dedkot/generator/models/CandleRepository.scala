@@ -1,27 +1,26 @@
 package org.dedkot.generator.models
 
+import cats.effect._
 import doobie._
 import doobie.implicits._
-import cats.effect._
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Random
 
 object CandleRepository {
 
-  implicit val cs = IO.contextShift(ExecutionContext.global)
+  private implicit val cs = IO.contextShift(ExecutionContext.global)
 
-  val xa = Transactor.fromDriverManager[IO](
+  private val xa = Transactor.fromDriverManager[IO](
     "org.postgresql.Driver",
     "jdbc:postgresql://localhost:5432/postgres",
     "postgres", // user
     "12345" // password
   )
 
-  val createTable =
+  private val createTable =
     sql"""
         CREATE TABLE IF NOT EXISTS candle
         (

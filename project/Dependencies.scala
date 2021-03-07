@@ -12,9 +12,9 @@ object Dependencies {
   )
 
   lazy val doobie = Seq(
-    "org.tpolecat" %% "doobie-core"     % versions.doobie,
+    "org.tpolecat" %% "doobie-core" % versions.doobie,
     "org.tpolecat" %% "doobie-postgres" % versions.doobie,
-    "org.tpolecat" %% "doobie-specs2"   % versions.doobie
+    "org.tpolecat" %% "doobie-specs2" % versions.doobie
   )
 
   object versions {
