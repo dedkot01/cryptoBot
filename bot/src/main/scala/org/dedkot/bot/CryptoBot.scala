@@ -7,7 +7,7 @@ import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.api.declarative.{Callbacks, Commands}
 import com.bot4s.telegram.future.Polling
 import com.bot4s.telegram.methods.{EditMessageReplyMarkup, EditMessageText, SendMessage}
-import com.bot4s.telegram.models.{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup}
+import com.bot4s.telegram.models.{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, Message, ReplyKeyboardMarkup}
 import org.dedkot.generator.models.CandleRepository
 
 import scala.concurrent.Future
@@ -27,45 +27,84 @@ class CryptoBot(token: String) extends ExampleBot(token)
     resizeKeyboard = Option(true)
   )
 
-  private val updateBtn = InlineKeyboardMarkup.singleButton(
-    InlineKeyboardButton("Обновить", callbackData = Option("Update"))
+  private val stopBtn = InlineKeyboardMarkup.singleButton(
+    InlineKeyboardButton("СТОП", callbackData = Option("Stop"))
   )
 
   onCommand("/start") { implicit msg =>
     reply("Выберите криптовалюту", replyMarkup = Option(cryptoKeyboard)).void
   }
 
+  private val mapOfActors = collection.mutable.Map[Int, ActorRef]()
+
+  object SubscriptionForUpdate {
+
+    def props(figi: String, msg: Message): Props = Props(new SubscriptionForUpdate(figi, msg))
+
+  }
+
+  class SubscriptionForUpdate(figi: String, implicit val msg: Message) extends Actor {
+
+    var candle = CandleRepository.selectCandle(figi)
+    val answer = SendMessage(
+      msg.source,
+      text =
+        s"""
+           |${candle.figi.value}:
+           |* Интервал: ${candle.interval}
+           |* Нижняя граница: ${candle.details.low}
+           |* Верхняя граница: ${candle.details.high}
+           |* Открытие: ${candle.details.open}
+           |* Закрытие: ${candle.details.close}
+           |* Время: ${candle.details.openTime}
+           |""".stripMargin
+    )
+
+    var myMsg: Message = null
+
+    request(answer).get map { msg => myMsg = msg }
+    context.self ! "UPDATE"
+
+    def receive = {
+      case "STOP" => context.stop(self)
+      case _ =>
+        Thread.sleep(5000)
+        println("Вроде ходют")
+        candle = CandleRepository.selectCandle(figi)
+        val answerE = EditMessageText(
+          Option(myMsg.source),
+          Option(myMsg.messageId),
+          text =
+            s"""
+              |${candle.figi.value}:
+              |* Интервал: ${candle.interval}
+              |* Нижняя граница: ${candle.details.low}
+              |* Верхняя граница: ${candle.details.high}
+              |* Открытие: ${candle.details.open}
+              |* Закрытие: ${candle.details.close}
+              |* Время: ${candle.details.openTime}
+              |""".stripMargin
+        )
+        request(answerE).void
+        context.self ! "UPDATE"
+    }
+
+  }
+
+  val system = ActorSystem("MasterOfSubscription")
+
   onCommand("ADA" | "BNB" | "BTC" | "DOGE" | "DOT" | "ETH") { implicit msg =>
-    val candle = CandleRepository.selectCandle(msg.text.get.split("/")(1))
-    val answer =
-      s"""
-        |${candle.figi.value}:
-        |* Интервал: ${candle.interval}
-        |* Нижняя граница: ${candle.details.low}
-        |* Верхняя граница: ${candle.details.high}
-        |* Открытие: ${candle.details.open}
-        |* Закрытие: ${candle.details.close}
-        |* Время: ${candle.details.openTime}
-        |""".stripMargin
-    reply(answer, replyMarkup = Option(updateBtn)).void
+    system.actorOf(SubscriptionForUpdate.props(msg.text.get.split("/")(1), msg))
+    Future[Unit]()
   }
 
   onCallbackQuery { implicit cbq =>
-    val candle = CandleRepository.selectCandle(cbq.message.get.text.get.split(":")(0))
+    mapOfActors(cbq.message.get.messageId) ! "STOP"
+
     val answer = EditMessageText(
       ChatId(cbq.message.get.source),
       cbq.message.get.messageId,
-      text = s"""
-                |${candle.figi.value}:
-                |* Интервал: ${candle.interval}
-                |* Нижняя граница: ${candle.details.low}
-                |* Верхняя граница: ${candle.details.high}
-                |* Открытие: ${candle.details.open}
-                |* Закрытие: ${candle.details.close}
-                |* Время: ${candle.details.openTime}
-                |""".stripMargin,
-      replyMarkup = updateBtn
-    )
+      text = "sosi")
 
     ackCallback().zip(request(answer).getOrElse(Future.successful(()))).void
   }
