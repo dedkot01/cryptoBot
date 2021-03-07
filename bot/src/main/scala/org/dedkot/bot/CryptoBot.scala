@@ -57,16 +57,35 @@ class CryptoBot(token: String) extends ExampleBot(token)
            |* Открытие: ${candle.details.open}
            |* Закрытие: ${candle.details.close}
            |* Время: ${candle.details.openTime}
-           |""".stripMargin
+           |""".stripMargin,
+      replyMarkup = stopBtn
     )
 
     var myMsg: Message = null
 
     request(answer).get map { msg => myMsg = msg }
+    Thread.sleep(1000)
+    mapOfActors += (myMsg.messageId -> context.self)
     context.self ! "UPDATE"
 
     def receive = {
-      case "STOP" => context.stop(self)
+      case "STOP" =>
+        context.stop(self)
+        val answerE = EditMessageText(
+          Option(myMsg.source),
+          Option(myMsg.messageId),
+          text =
+            s"""
+               |${candle.figi.value}:
+               |* Интервал: ${candle.interval}
+               |* Нижняя граница: ${candle.details.low}
+               |* Верхняя граница: ${candle.details.high}
+               |* Открытие: ${candle.details.open}
+               |* Закрытие: ${candle.details.close}
+               |* Время: ${candle.details.openTime}
+               |""".stripMargin
+        )
+        request(answerE).void
       case _ =>
         Thread.sleep(5000)
         println("Вроде ходют")
@@ -83,7 +102,8 @@ class CryptoBot(token: String) extends ExampleBot(token)
               |* Открытие: ${candle.details.open}
               |* Закрытие: ${candle.details.close}
               |* Время: ${candle.details.openTime}
-              |""".stripMargin
+              |""".stripMargin,
+          replyMarkup = stopBtn
         )
         request(answerE).void
         context.self ! "UPDATE"
@@ -100,13 +120,7 @@ class CryptoBot(token: String) extends ExampleBot(token)
 
   onCallbackQuery { implicit cbq =>
     mapOfActors(cbq.message.get.messageId) ! "STOP"
-
-    val answer = EditMessageText(
-      ChatId(cbq.message.get.source),
-      cbq.message.get.messageId,
-      text = "sosi")
-
-    ackCallback().zip(request(answer).getOrElse(Future.successful(()))).void
+    Future[Unit]()
   }
 
 }
