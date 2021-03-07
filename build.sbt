@@ -13,6 +13,7 @@ lazy val bot = (project in file("bot"))
 
 lazy val generator = (project in file("generator-data"))
   .settings(
+    assemblyJarName in assembly := "generatorCandle.jar",
     libraryDependencies ++= Dependencies.doobie
   )
 

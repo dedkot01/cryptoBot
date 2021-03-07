@@ -11,11 +11,11 @@ import scala.concurrent.duration.FiniteDuration
 
 object CandleRepository {
 
-  private implicit val cs = IO.contextShift(ExecutionContext.global)
+  private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   private val xa = Transactor.fromDriverManager[IO](
     "org.postgresql.Driver",
-    "jdbc:postgresql://localhost:5432/postgres",
+    "jdbc:postgresql://postgres:5432/postgres",
     "postgres", // user
     "12345" // password
   )

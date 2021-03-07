@@ -10,7 +10,9 @@ import com.bot4s.telegram.methods.{EditMessageText, SendMessage}
 import com.bot4s.telegram.models._
 import org.dedkot.generator.models.{Candle, CandleRepository}
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class CryptoBot(token: String) extends ExampleBot(token)
   with Polling
@@ -37,9 +39,11 @@ class CryptoBot(token: String) extends ExampleBot(token)
   }
 
   onCommand("ADA" | "BNB" | "BTC" | "DOGE" | "DOT" | "ETH") { implicit msg =>
-    Future(
-      actorSystem.actorOf(SubscriptionForUpdate.props(msg.text.get.split("/")(1), msg))
-    )
+    Future{
+      val actor = actorSystem.actorOf(SubscriptionForUpdate.props(msg.text.get.split("/")(1), msg))
+      actorSystem.scheduler.schedule(Duration(1000, TimeUnit.MILLISECONDS),
+        Duration(5000, TimeUnit.MILLISECONDS), actor, "UPDATE")
+    }
   }
 
   onCallbackQuery { implicit cbq =>
@@ -57,6 +61,11 @@ class CryptoBot(token: String) extends ExampleBot(token)
       replyMarkup = stopBtn
     )
 
+    request(sendMsg).onComplete { sendMsg =>
+      msg = sendMsg.get
+      mapOfActors += (msg.messageId -> context.self)
+    }
+
     def receive: Receive = {
       case "STOP" =>
         context.stop(self)
@@ -67,8 +76,7 @@ class CryptoBot(token: String) extends ExampleBot(token)
             text = msg.text.get
           )
         ).void
-      case _ =>
-        Thread.sleep(5000)
+      case "UPDATE" =>
         request(
           EditMessageText(
             Option(msg.source),
@@ -77,13 +85,6 @@ class CryptoBot(token: String) extends ExampleBot(token)
             replyMarkup = stopBtn
           )
         ).void
-        context.self ! "UPDATE"
-    }
-
-    request(sendMsg).onComplete { sendMsg =>
-      msg = sendMsg.get
-      mapOfActors += (msg.messageId -> context.self)
-      context.self ! "UPDATE"
     }
 
     private def text(candle: Candle) =
