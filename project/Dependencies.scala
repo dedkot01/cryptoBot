@@ -8,8 +8,7 @@ object Dependencies {
   )
 
   lazy val akka = Seq(
-    "com.typesafe.akka" %% "akka-actor-typed" % versions.akka,
-    "ch.qos.logback" % "logback-classic" % "1.2.3"
+    "com.typesafe.akka" %% "akka-actor" % versions.akka
   )
 
   lazy val doobie = Seq(
@@ -21,7 +20,7 @@ object Dependencies {
   object versions {
 
     val tgBot = "4.4.0-RC2"
-    val akka = "2.6.12"
+    val akka = "2.5.23"
     val doobie = "0.9.0"
 
   }
